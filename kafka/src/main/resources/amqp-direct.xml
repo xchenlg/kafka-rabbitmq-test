@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:rabbit="http://www.springframework.org/schema/rabbit" 
+    xsi:schemaLocation="http://www.springframework.org/schema/beans 
+    http://www.springframework.org/schema/beans/spring-beans-4.2.xsd 
+    http://www.springframework.org/schema/rabbit
+    http://www.springframework.org/schema/rabbit/spring-rabbit-1.0.xsd" >
+
+	<rabbit:connection-factory id="connectionFactory" host="${rabbit.hosts}"
+                               port="${rabbit.port}" username="${rabbit.username}" password="${rabbit.password}" virtual-host="${rabbit.virtualHost}"
+                               channel-cache-size="50"/>
+    <rabbit:admin connection-factory="connectionFactory"/>
+    <!--定义消息队列-->
+    <rabbit:queue name="spittle.alert.queue.1" durable="true" auto-delete="false"/>
+    <rabbit:queue name="spittle.alert.queue.2" durable="true" auto-delete="false"/>
+    <rabbit:queue name="spittle.alert.queue.3" durable="true" auto-delete="false"/>
+    <rabbit:queue name="spittle.alert.queue.5" durable="true" auto-delete="false"/>
+    <!--绑定fanout交换器队列-->
+<!--     <rabbit:fanout-exchange id="spittle.fanout" name="spittle.fanout" durable="true"> -->
+<!--         <rabbit:bindings> -->
+<!--             <rabbit:binding queue="spittle.alert.queue.1"></rabbit:binding> -->
+<!--             <rabbit:binding queue="spittle.alert.queue.2"></rabbit:binding> -->
+<!--             <rabbit:binding queue="spittle.alert.queue.3"></rabbit:binding> -->
+<!--         </rabbit:bindings> 
+    </rabbit:fanout-exchange>-->
+    <!--根据key值，确定放到哪个队列当中，如果没有监听的话，暂时不被消费-->
+	<rabbit:direct-exchange name="spittle.direct" durable="true" auto-delete="false" id="spittle.direct">
+	    <rabbit:bindings>
+	        <rabbit:binding queue="spittle.alert.queue.1" key="key1"/>
+	        <rabbit:binding queue="spittle.alert.queue.5" key="key5"/>
+	    </rabbit:bindings>
+	</rabbit:direct-exchange>
+	
+	<rabbit:template queue="1" exchange="spittle.direct" id="amqpTemplate"  connection-factory="connectionFactory"  message-converter="jsonMessageConverter" />
+    <bean id="jsonMessageConverter" class="org.springframework.amqp.support.converter.JsonMessageConverter"></bean>
+	
+	<rabbit:listener-container connection-factory="connectionFactory" >
+	    <rabbit:listener method="onMessage" queues="spittle.alert.queue.1" ref="queueListenter"/>
+	</rabbit:listener-container>
+	<rabbit:listener-container connection-factory="connectionFactory" >
+	    <rabbit:listener method="onMessage" queues="spittle.alert.queue.5" ref="queueListenter2"/>
+	</rabbit:listener-container>
+
+</beans>
